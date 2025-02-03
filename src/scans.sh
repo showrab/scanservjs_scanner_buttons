@@ -1,0 +1,196 @@
+#! /bin/bash
+
+#### Variables ####
+# TempFiles
+scanerinfosFile="scanerinfos.txt"
+devicesFile="devices.txt"
+dockersFile="dockers.txt"
+indexFile="index.txt"
+colorFile="color.txt"
+
+#Scaner Info
+usbScanerName="5590"
+scanimageDeviceName="hp5590:libusb"
+
+#### Functions ####
+
+# Call the scanservjs with a REST POST Request
+# Template is filled with global variables
+scan() {
+#echo \
+curl -X 'POST' \
+  'http://scan/api/v1/scan' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "params": {
+    "deviceId": "'$scanimageDeviceName':'$bus':'$device'",
+    "top": 0,
+    "left": '$left',
+    "width": 210,
+    "height": 297,
+    "pageWidth": 210,
+    "pageHeight": 297,
+    "resolution": '$resolution',
+    "mode": "'$mode'",
+    "source": "'$source'",
+    "adfMode": "'$adfMode'",
+    "brightness": 0,
+    "contrast": 0,
+    "dynamicLineart": false,
+    "ald": "yes"
+  },
+  "filters": [
+    "filter.auto-level",
+    "filter.threshold"
+  ],
+  "pipeline": "PDF (JPG | @:pipeline.high-quality)",
+  "batch": "'$batchMode'",
+  "index": '$index'
+}'
+#>scanCommand.txt
+}
+
+# Find the $searchText in the $file, create tokens separated by space 
+# Return $token without first and last letter (as the desired Token is [token])
+findInFile() { 
+    searchText=$1
+    index=$2  
+    file=$3
+
+    foundLine=`grep $searchText $file`
+    tokens=(${foundLine// / })
+    token=${tokens[$index]:1:-1}
+    echo $token
+}
+
+#Find the text $1 in the file $scanerinfosFile. Return token at index $2
+findInScaninfo() {
+    echo $(findInFile $1 $2 $scanerinfosFile)
+}
+
+#### Main ####
+
+# list all USB Devices
+lsusb>$devicesFile
+# Find line with our USB scanner "5590"
+usbScaner=`grep $usbScanerName $devicesFile`
+#usbScaner="Bus 001 Device 005: ID 03f0:1705 HP, Inc ScanJet 5590"
+# tokenisze $usbScaner
+usbScanerArr=(${usbScaner// / })
+bus=${usbScanerArr[1]}
+device=${usbScanerArr[3]::-1}
+
+# Find docker containerId of "sbs20/scanservjs"
+docker ps>$dockersFile
+container=`grep scanservjs $dockersFile`
+#container="1ab77b38b151 sbs20/scanservjs:latest "/entrypoint.sh" 2 months ago Up 9 days 0.0.0.0:80->8080/tcp, [::]:80->8080/tcp scanserverjs"
+containerTokens=(${container// / })
+containerId=${containerTokens[0]}
+#echo $containerId
+
+# Get all options for specific scaner
+docker exec $containerId sh -c "scanimage --format=pnm -p -A -d $scanimageDeviceName:$bus:$device">$scanerinfosFile
+
+# get pressed button
+button=$(findInScaninfo "button-pressed" 2)
+#echo $button
+
+#define/initialize global variables for the scan function
+resolution=300
+source="Flatbed"
+adfMode="Simplex"
+batchMode="none"
+left="0"
+
+#initialize $indexFile
+if [ ! -f $indexFile ]; then
+    echo "0">$indexFile
+fi
+index=`cat $indexFile`
+
+# inizialize $colorFile
+if [ ! -f $colorFile ]; then
+    echo Color>$colorFile
+fi
+mode=`cat $colorFile`
+
+# evaluate the pressed button and set global variables for this scan function
+case "$button" in
+    "none")
+        echo none
+	;;
+
+    "power")
+	    echo power
+    ;;
+
+    "scan")
+        echo scan flatbed one page
+        source="Flatbed"
+        adfMode="Simplex"
+        index=0
+        echo "0">$indexFile
+	    scan
+	;;
+    
+    "collect")
+        echo scan adf 
+        source="ADF"
+        adfMode="Simplex"
+        left="2.5" #ADF is centered, left start of page has to be moved by 2.5
+        index=0
+        scan
+	;;
+    
+    "file")
+        echo scan adf duplex
+        source="ADF Duplex"
+        adfMode="Duplex"
+        left="2.5"
+        scan
+	;;
+    
+    "email")
+        source="Flatbed"
+        batchMode="manual"
+        index=`cat $indexFile`
+        ((index++))
+        echo "$index">$indexFile
+        echo scan manual batch flatbed $index
+        scan
+    ;;
+    
+    "copy")
+        echo scan manual batch end ($index pages)
+        source="Flatbed"
+        batchMode="manual"
+        index=-1
+        echo "0">$indexFile
+        scan
+	;;
+
+    "up")
+	    echo up
+	;;
+
+    "down")
+	    echo down
+	;;
+
+    "mode")
+        scanMode=$(findInScaninfo "mode" 4)
+        if [ $mode = "Color" ]; then mode="Gray"; else mode="Color";fi
+        echo mode $scanmode -> $mode
+	;;
+
+    "cancel")
+	    echo cancel
+        index=0
+        echo "0">$indexFile
+	;;
+
+    *)
+	    echo nothing to do
+	;;
+esac
