@@ -7,6 +7,7 @@ devicesFile="devices.txt"
 dockersFile="dockers.txt"
 indexFile="index.txt"
 colorFile="color.txt"
+logFile="scans.log"
 
 #Scaner Info
 usbScanerName="5590"
@@ -52,7 +53,7 @@ curl -X 'POST' \
 }
 
 # Find the $searchText in the $file, create tokens separated by space 
-# Return $token without first and last letter (as the desired Token is [token])
+# Return $token without first and last letter (remove square brackets)
 findInFile() { 
     searchText=$1
     index=$2  
@@ -116,37 +117,41 @@ fi
 mode=`cat $colorFile`
 
 # evaluate the pressed button and set global variables for this scan function
+dt=`date '+%Y-%m-%d %H:%M:%S'`
+
 case "$button" in
     "none")
-        echo none
+        #echo none
 	;;
 
     "power")
-	    echo power
+	    echo $dt power>$logFile
     ;;
 
     "scan")
-        echo scan flatbed one page
+        echo $dt scan flatbed one page>$logFile
         source="Flatbed"
         adfMode="Simplex"
-        index=0
+        index=1
         echo "0">$indexFile
 	    scan
 	;;
     
     "collect")
-        echo scan adf 
+        echo $dt scan adf>$logFile
         source="ADF"
         adfMode="Simplex"
+        batchMode="auto"
         left="2.5" #ADF is centered, left start of page has to be moved by 2.5
-        index=0
+        index=1
         scan
 	;;
     
     "file")
-        echo scan adf duplex
+        echo $dt scan adf duplex>$logFile
         source="ADF Duplex"
         adfMode="Duplex"
+        batchMode="auto"
         left="2.5"
         scan
 	;;
@@ -157,12 +162,12 @@ case "$button" in
         index=`cat $indexFile`
         ((index++))
         echo "$index">$indexFile
-        echo scan manual batch flatbed $index
+        echo $dt scan manual batch flatbed $index>$logFile
         scan
     ;;
     
     "copy")
-        echo scan manual batch end ($index pages)
+        echo $dt scan manual batch end. $index pages scaned>$logFile
         source="Flatbed"
         batchMode="manual"
         index=-1
@@ -171,26 +176,26 @@ case "$button" in
 	;;
 
     "up")
-	    echo up
+	    echo $dt up>$logFile
 	;;
 
     "down")
-	    echo down
+	    echo $dt down>$logFile
 	;;
 
     "mode")
         scanMode=$(findInScaninfo "mode" 4)
         if [ $mode = "Color" ]; then mode="Gray"; else mode="Color";fi
-        echo mode $scanmode -> $mode
+        echo $dt mode $scanmode to $mode>$logFile
 	;;
 
     "cancel")
-	    echo cancel
+	    echo $dt cancel>$logFile
         index=0
         echo "0">$indexFile
 	;;
 
     *)
-	    echo nothing to do
+	    #echo $dt nothing to do>$logFile
 	;;
 esac
