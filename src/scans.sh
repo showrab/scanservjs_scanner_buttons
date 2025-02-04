@@ -125,11 +125,11 @@ case "$button" in
 	;;
 
     "power")
-	    echo $dt power>$logFile
+	    echo $dt power>>$logFile
     ;;
 
     "scan")
-        echo $dt scan flatbed one page>$logFile
+        echo $dt scan flatbed one page>>$logFile
         source="Flatbed"
         adfMode="Simplex"
         index=1
@@ -138,7 +138,7 @@ case "$button" in
 	;;
     
     "collect")
-        echo $dt scan adf>$logFile
+        echo $dt scan adf>>$logFile
         source="ADF"
         adfMode="Simplex"
         batchMode="auto"
@@ -148,7 +148,7 @@ case "$button" in
 	;;
     
     "file")
-        echo $dt scan adf duplex>$logFile
+        echo $dt scan adf duplex>>$logFile
         source="ADF Duplex"
         adfMode="Duplex"
         batchMode="auto"
@@ -162,12 +162,12 @@ case "$button" in
         index=`cat $indexFile`
         ((index++))
         echo "$index">$indexFile
-        echo $dt scan manual batch flatbed $index>$logFile
+        echo $dt scan manual batch flatbed $index>>$logFile
         scan
     ;;
     
     "copy")
-        echo $dt scan manual batch end. $index pages scaned>$logFile
+        echo $dt scan manual batch end. $index pages scaned>>$logFile
         source="Flatbed"
         batchMode="manual"
         index=-1
@@ -176,26 +176,26 @@ case "$button" in
 	;;
 
     "up")
-	    echo $dt up>$logFile
+	    echo $dt up>>$logFile
 	;;
 
     "down")
-	    echo $dt down>$logFile
+	    echo $dt down>>$logFile
 	;;
 
     "mode")
         scanMode=$(findInScaninfo "mode" 4)
         if [ $mode = "Color" ]; then mode="Gray"; else mode="Color";fi
-        echo $dt mode $scanmode to $mode>$logFile
+        echo $dt mode $scanmode to $mode>>$logFile
 	;;
 
     "cancel")
-	    echo $dt cancel>$logFile
+	    echo $dt cancel>>$logFile
         index=0
         echo "0">$indexFile
 	;;
 
     *)
-	    #echo $dt nothing to do>$logFile
+	    #echo $dt nothing to do>>$logFile
 	;;
 esac
