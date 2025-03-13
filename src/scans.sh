@@ -2,12 +2,13 @@
 
 #### Variables ####
 # TempFiles
-scanerinfosFile="scanerinfos.txt"
-devicesFile="devices.txt"
-dockersFile="dockers.txt"
-indexFile="index.txt"
-colorFile="color.txt"
-logFile="scans.log"
+startdir="/home/andre"
+scanerinfosFile=${startdir}/"scanerinfos.txt"
+devicesFile=${startdir}/"devices.txt"
+dockersFile=${startdir}/"dockers.txt"
+indexFile=${startdir}/"index.txt"
+colorFile=${startdir}/"color.txt"
+logFile=${startdir}/"scans.log"
 
 #Scaner Info
 usbScanerName="5590"
@@ -42,14 +43,13 @@ curl -X 'POST' \
     "ald": "yes"
   },
   "filters": [
-    "filter.auto-level",
-    "filter.threshold"
   ],
   "pipeline": "PDF (JPG | @:pipeline.high-quality)",
   "batch": "'$batchMode'",
   "index": '$index'
 }'
 #>scanCommand.txt
+echo 
 }
 
 # Find the $searchText in the $file, create tokens separated by space 
@@ -113,10 +113,10 @@ if [ ! -f $colorFile ]; then
 fi
 mode=`cat $colorFile`
 
+echo docker exec $containerId sh -c "scanimage --format=pnm -p -A -d $scanimageDeviceName:$bus:$device"
 while true
 do
     # Get all options for specific scaner
-    # echo docker exec $containerId sh -c "scanimage --format=pnm -p -A -d $scanimageDeviceName:$bus:$device"
     docker exec $containerId sh -c "scanimage --format=pnm -p -A -d $scanimageDeviceName:$bus:$device">$scanerinfosFile
 
     # get pressed button
